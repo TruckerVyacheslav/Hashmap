@@ -1,6 +1,6 @@
-import java.util.ArrayList;
+import java.util.*;
 
-public class Hashmap<E, T> {
+public class Hashmap<E, T> implements Map <E, T>   {
 
     private final static int DEFAULT_SIZE = 16;
     private final static double DEFAULT_RESIZE_PERCENT = 0.5;
@@ -14,13 +14,14 @@ public class Hashmap<E, T> {
     public Hashmap(int startingSize, double resizePercent) {
         this.resizePercent = resizePercent;
         this.capacity = startingSize;
-        buckets = new ArrayList<>(capacity);
+        buckets = new ArrayList<>(Collections.nCopies(capacity, null));
+
     }
 
     public Hashmap() {
         capacity = DEFAULT_SIZE;
         resizePercent = DEFAULT_RESIZE_PERCENT;
-        buckets = new ArrayList<>(capacity);
+        buckets = new ArrayList<>(Collections.nCopies(capacity, null));
     }
 
     class HashLink
@@ -42,43 +43,112 @@ public class Hashmap<E, T> {
 
     }
 
-    public void remove(E key) {
+    @Override
+    public T remove(Object key) {
         int hash = key.hashCode();
         HashLink item = buckets.get(hash % capacity);
         HashLink last = null;
 
         while (item != null) {
-            if(item.key == key) {
+            if(item.key.equals(key)) {
                 if(last != null)
                     last.next = item.next;
                 else
                     buckets.set(hash % capacity, item.next);
-                return;
+                size--;
+                return item.value;
             }
             last = item;
             item = item.next;
         }
+        return null;
     }
 
-    public T get (E key) {
+    @Override
+    public T get (Object key) {
         int hash = key.hashCode();
         HashLink item = buckets.get(hash % capacity);
 
         while(item != null) {
-            if(item.key == key)
+            if(item.key.equals(key))
                 return item.value;
             item = item.next;
         }
         return null;
     }
 
-    public Hashmap<E, T> put(E key, T value) {
+    @Override
+    public int size() {
+        return size;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return size == 0;
+    }
+
+    @Override
+    public boolean containsKey(Object key) {
+        HashLink item = buckets.get(key.hashCode() % size);
+
+        while (item != null) {
+            if (item.key.equals(key))
+                return true;
+            item = item.next;
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean containsValue(Object value) {
+        for(HashLink item : buckets) {
+            while (item != null) {
+                if (item.value.equals(value))
+                    return true;
+                item = item.next;
+            }
+        }
+
+        return false;
+    }
+
+    @Override
+    public T put(E key, T value) {
         int hash = key.hashCode();
 
         return putLink(new HashLink(key, value, hash, null));
     }
 
-    private Hashmap<E, T> putLink(HashLink link) {
+    @Override
+    public void putAll(Map<? extends E, ? extends T> m) {
+        for(E key : m.keySet()) {
+            put(key, m.get(key));
+        }
+    }
+
+    @Override
+    public void clear() {
+        buckets = new ArrayList<>(capacity);
+        size = 0;
+    }
+
+    @Override
+    public Set<E> keySet() {
+        throw new UnsupportedOperationException("not implemented");
+    }
+
+    @Override
+    public Collection<T> values() {
+        throw new UnsupportedOperationException("not implemented");
+    }
+
+    @Override
+    public Set<Entry<E, T>> entrySet() {
+        throw new UnsupportedOperationException("not implemented");
+    }
+
+    private T putLink(HashLink link) {
         size++;
         if (size >= capacity * resizePercent)
             resize();
@@ -93,7 +163,7 @@ public class Hashmap<E, T> {
                     buckets.set(link.hash % capacity, link);
 
                 link.next = item.next;
-                return this;
+                return link.value;
             }
             last = item;
             item = item.next;
@@ -104,11 +174,11 @@ public class Hashmap<E, T> {
         } else {
             buckets.set(link.hash % capacity, link);
         }
-        return this;
+        return link.value;
     }
 
     private void resize() {
-        ArrayList<HashLink> newBuckets = new ArrayList<>(size * 2);
+        ArrayList<HashLink> newBuckets = new ArrayList<>(Collections.nCopies(capacity * 2, null));
         ArrayList<HashLink> oldBuckets = buckets;
         buckets = newBuckets;
         size = 0;
