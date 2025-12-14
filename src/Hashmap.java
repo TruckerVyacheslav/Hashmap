@@ -12,6 +12,10 @@ public class Hashmap<E, T> implements Map <E, T>   {
     ArrayList<HashLink> buckets;
 
     public Hashmap(int startingSize, double resizePercent) {
+        if(startingSize < 1)
+            throw new IllegalArgumentException("Starting size must be >= 1");
+        if(resizePercent <= 0)
+            throw new IllegalArgumentException("Starting size must be > 0");
         this.resizePercent = resizePercent;
         this.capacity = startingSize;
         buckets = new ArrayList<>(Collections.nCopies(capacity, null));
@@ -45,8 +49,10 @@ public class Hashmap<E, T> implements Map <E, T>   {
 
     @Override
     public T remove(Object key) {
-        int hash = key.hashCode();
-        HashLink item = buckets.get(hash % capacity);
+        if(Objects.isNull(key))
+            throw new NullPointerException("key cannot be null");
+        int hash = Math.abs(key.hashCode() % capacity);
+        HashLink item = buckets.get(hash);
         HashLink last = null;
 
         while (item != null) {
@@ -54,7 +60,7 @@ public class Hashmap<E, T> implements Map <E, T>   {
                 if(last != null)
                     last.next = item.next;
                 else
-                    buckets.set(hash % capacity, item.next);
+                    buckets.set(hash , item.next);
                 size--;
                 return item.value;
             }
@@ -66,8 +72,10 @@ public class Hashmap<E, T> implements Map <E, T>   {
 
     @Override
     public T get (Object key) {
-        int hash = key.hashCode();
-        HashLink item = buckets.get(hash % capacity);
+        if(Objects.isNull(key))
+            throw new NullPointerException("key cannot be null");
+        int hash = Math.abs(key.hashCode() % capacity);
+        HashLink item = buckets.get(hash);
 
         while(item != null) {
             if(item.key.equals(key))
@@ -89,6 +97,8 @@ public class Hashmap<E, T> implements Map <E, T>   {
 
     @Override
     public boolean containsKey(Object key) {
+        if(Objects.isNull(key))
+            throw new NullPointerException("key cannot be null");
         HashLink item = buckets.get(key.hashCode() % size);
 
         while (item != null) {
@@ -102,6 +112,8 @@ public class Hashmap<E, T> implements Map <E, T>   {
 
     @Override
     public boolean containsValue(Object value) {
+        if(Objects.isNull(value))
+            throw new NullPointerException("value cannot be null");
         for(HashLink item : buckets) {
             while (item != null) {
                 if (item.value.equals(value))
@@ -115,6 +127,10 @@ public class Hashmap<E, T> implements Map <E, T>   {
 
     @Override
     public T put(E key, T value) {
+        if(Objects.isNull(key))
+            throw new NullPointerException("key cannot be null");
+        if(Objects.isNull(value))
+            throw new NullPointerException("value cannot be null");
         int hash = key.hashCode();
 
         return putLink(new HashLink(key, value, hash, null));
@@ -149,19 +165,18 @@ public class Hashmap<E, T> implements Map <E, T>   {
     }
 
     private T putLink(HashLink link) {
-        size++;
+        int hash = Math.abs(link.hash % capacity);
         if (size >= capacity * resizePercent)
             resize();
 
-        HashLink item = buckets.get(link.hash % capacity);
+        HashLink item = buckets.get(hash);
         HashLink last = null;
         while (item != null) {
-            if(item.key == link.key) {
+            if(item.key.equals(link.key)) {
                 if(last != null)
-                   last.next = link;
+                    last.next = link;
                 else
-                    buckets.set(link.hash % capacity, link);
-
+                    buckets.set(hash, link);
                 link.next = item.next;
                 return link.value;
             }
@@ -172,8 +187,9 @@ public class Hashmap<E, T> implements Map <E, T>   {
         if(last != null) {
             last.next = link;
         } else {
-            buckets.set(link.hash % capacity, link);
+            buckets.set(hash, link);
         }
+        size++;
         return link.value;
     }
 
@@ -187,8 +203,19 @@ public class Hashmap<E, T> implements Map <E, T>   {
         for(HashLink bucket : oldBuckets) {
             HashLink item = bucket;
             while(item != null) {
-                putLink(item);
-                item = item.next;
+                HashLink next = item.next;
+                item.next = null;
+                int hash = Math.abs(item.hash % capacity);
+                HashLink newBucket = buckets.get(hash);
+                if(newBucket == null) {
+                    buckets.set(hash, item);
+                } else {
+                    while(newBucket.next != null)
+                        newBucket = newBucket.next;
+                    newBucket.next = item;
+                }
+
+                item = next;
             }
         }
 
